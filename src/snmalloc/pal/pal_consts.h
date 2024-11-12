@@ -4,14 +4,12 @@
 
 #include <atomic>
 
-namespace snmalloc
-{
-  /**
-   * Flags in a bitfield of optional features that a PAL may support.  These
-   * should be set in the PAL's `pal_features` static constexpr field.
-   */
-  enum PalFeatures : uint64_t
-  {
+namespace snmalloc {
+/**
+ * Flags in a bitfield of optional features that a PAL may support.  These
+ * should be set in the PAL's `pal_features` static constexpr field.
+ */
+enum PalFeatures : uint64_t {
     /**
      * This PAL supports low memory notifications.  It must implement a
      * `register_for_low_memory_callback` method that allows callbacks to be
@@ -60,13 +58,12 @@ namespace snmalloc
      * modify which parts get dumped.
      */
     CoreDump = (1 << 6),
-  };
+};
 
-  /**
-   * Flag indicating whether requested memory should be zeroed.
-   */
-  enum ZeroMem
-  {
+/**
+ * Flag indicating whether requested memory should be zeroed.
+ */
+enum ZeroMem {
     /**
      * Memory should not be zeroed, contents are undefined.
      */
@@ -77,16 +74,16 @@ namespace snmalloc
      * mechanism as long as any load from the memory returns zero.
      */
     YesZero
-  };
+};
 
-  /**
-   * Default Tag ID for the Apple class
-   */
-  static const int PALAnonDefaultID = 241;
+/**
+ * Default Tag ID for the Apple class
+ */
+static const int PALAnonDefaultID = 241;
 
-  /**
-   * Query whether the PAL supports a specific feature.
-   */
-  template<PalFeatures F, typename PAL>
-  static constexpr bool pal_supports = (PAL::pal_features & F) == F;
+/**
+ * Query whether the PAL supports a specific feature.
+ */
+template<PalFeatures F, typename PAL>
+static constexpr bool pal_supports = (PAL::pal_features & F) == F;
 } // namespace snmalloc

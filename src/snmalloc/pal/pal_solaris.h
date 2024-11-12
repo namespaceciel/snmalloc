@@ -3,15 +3,13 @@
 #if defined(__sun)
 #  include "pal_posix.h"
 
-namespace snmalloc
-{
-  /**
-   * Platform abstraction layer for Solaris.  This provides features for this
-   * system.
-   */
-  class PALSolaris : public PALPOSIX<PALSolaris>
-  {
-  public:
+namespace snmalloc {
+/**
+ * Platform abstraction layer for Solaris.  This provides features for this
+ * system.
+ */
+class PALSolaris : public PALPOSIX<PALSolaris> {
+public:
     /**
      * Bitmap of PalFeatures flags indicating the optional features that this
      * PAL supports.
@@ -24,6 +22,6 @@ namespace snmalloc
      * commit.
      */
     static constexpr int default_mmap_flags = MAP_NORESERVE;
-  };
+};
 } // namespace snmalloc
 #endif

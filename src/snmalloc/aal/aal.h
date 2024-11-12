@@ -14,11 +14,9 @@
 #include <cstdint>
 #include <utility>
 
-#if ( \
-  defined(__i386__) || defined(_M_IX86) || defined(_X86_) || \
-  defined(__amd64__) || defined(__x86_64__) || defined(_M_X64) || \
-  defined(_M_AMD64)) && \
-  !defined(_M_ARM64EC)
+#if (defined(__i386__) || defined(_M_IX86) || defined(_X86_) || defined(__amd64__) || defined(__x86_64__) \
+     || defined(_M_X64) || defined(_M_AMD64))                                                             \
+    && !defined(_M_ARM64EC)
 #  if defined(SNMALLOC_SGX)
 #    define PLATFORM_IS_X86_SGX
 #    define SNMALLOC_NO_AAL_BUILTINS
@@ -27,8 +25,7 @@
 #  endif
 #endif
 
-#if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64) || \
-  defined(_M_ARM64EC)
+#if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
 #  define PLATFORM_IS_ARM
 #endif
 
@@ -44,16 +41,14 @@
 #  define PLATFORM_IS_RISCV
 #endif
 
-namespace snmalloc
-{
-  /**
-   * Architecture Abstraction Layer. Includes default implementations of some
-   * functions using compiler builtins.  Falls back to the definitions in the
-   * platform's AAL if the builtin does not exist.
-   */
-  template<class Arch>
-  struct AAL_Generic : Arch
-  {
+namespace snmalloc {
+/**
+ * Architecture Abstraction Layer. Includes default implementations of some
+ * functions using compiler builtins.  Falls back to the definitions in the
+ * platform's AAL if the builtin does not exist.
+ */
+template<class Arch>
+struct AAL_Generic : Arch {
     /*
      * Provide a default specification of address_t as uintptr_t for Arch-es
      * that support IntegerPointers.  Those Arch-es without IntegerPointers
@@ -69,25 +64,21 @@ namespace snmalloc
      * the thing we're trying to avoid with the conditional.
      */
 
-    struct default_address_t
-    {
-      using address_t = uintptr_t;
+    struct default_address_t {
+        using address_t = uintptr_t;
     };
 
-    using address_t = typename std::conditional_t<
-      (Arch::aal_features & IntegerPointers) != 0,
-      default_address_t,
-      Arch>::address_t;
+    using address_t =
+        typename std::conditional_t<(Arch::aal_features & IntegerPointers) != 0, default_address_t, Arch>::address_t;
 
-  private:
+private:
     /**
      * SFINAE template and default case.  T will be Arch and the second template
      * argument defaults at the call site (below).
      */
     template<typename T, typename = int>
-    struct default_bits_t
-    {
-      static constexpr size_t value = sizeof(size_t) * 8;
+    struct default_bits_t {
+        static constexpr size_t value = sizeof(size_t) * 8;
     };
 
     /**
@@ -97,19 +88,18 @@ namespace snmalloc
      * shadows the default; otherwise, this specialization has no effect.
      */
     template<typename T>
-    struct default_bits_t<T, decltype(((void)T::bits, 0))>
-    {
-      static constexpr size_t value = T::bits;
+    struct default_bits_t<T, decltype(((void)T::bits, 0))> {
+        static constexpr size_t value = T::bits;
     };
 
-  public:
+public:
     /**
      * Architectural word width as overridden by the underlying Arch-itecture or
      * defaulted as per above.
      */
     static constexpr size_t bits = default_bits_t<Arch>::value;
 
-  private:
+private:
     /**
      * Architectures have a default opinion of their address space size, but
      * this is mediated by the platform (e.g., the kernel may cleave the address
@@ -120,9 +110,8 @@ namespace snmalloc
      * for more details.
      */
     template<typename T, typename = int>
-    struct default_address_bits_t
-    {
-      static constexpr size_t value = (bits == 64) ? 48 : 32;
+    struct default_address_bits_t {
+        static constexpr size_t value = (bits == 64) ? 48 : 32;
     };
 
     /**
@@ -131,12 +120,11 @@ namespace snmalloc
      * T::address_bits exists.
      */
     template<typename T>
-    struct default_address_bits_t<T, decltype(((void)T::address_bits, 0))>
-    {
-      static constexpr size_t value = T::address_bits;
+    struct default_address_bits_t<T, decltype(((void)T::address_bits, 0))> {
+        static constexpr size_t value = T::address_bits;
     };
 
-  public:
+public:
     static constexpr size_t address_bits = default_address_bits_t<Arch>::value;
 
     /**
@@ -147,12 +135,11 @@ namespace snmalloc
      * architectures to avoid needing to implement a custom `prefetch` method
      * if they are used only with a compiler that provides the builtin.
      */
-    static inline void prefetch(void* ptr) noexcept
-    {
+    inline static void prefetch(void* ptr) noexcept {
 #if __has_builtin(__builtin_prefetch) && !defined(SNMALLOC_NO_AAL_BUILTINS)
-      __builtin_prefetch(ptr, 1, 3);
+        __builtin_prefetch(ptr, 1, 3);
 #else
-      Arch::prefetch(ptr);
+        Arch::prefetch(ptr);
 #endif
     }
 
@@ -164,76 +151,50 @@ namespace snmalloc
      * architectures to avoid needing to implement a custom `tick` method
      * if they are used only with a compiler that provides the builtin.
      */
-    static inline uint64_t tick() noexcept
-    {
-      if constexpr (
-        (Arch::aal_features & NoCpuCycleCounters) == NoCpuCycleCounters)
-      {
-        auto tick = std::chrono::high_resolution_clock::now();
-        return static_cast<uint64_t>(
-          std::chrono::duration_cast<std::chrono::nanoseconds>(
-            tick.time_since_epoch())
-            .count());
-      }
-      else
-      {
-#if __has_builtin(__builtin_readcyclecounter) && !defined(__APPLE__) && \
-  !defined(SNMALLOC_NO_AAL_BUILTINS)
-        return __builtin_readcyclecounter();
+    inline static uint64_t tick() noexcept {
+        if constexpr ((Arch::aal_features & NoCpuCycleCounters) == NoCpuCycleCounters) {
+            auto tick = std::chrono::high_resolution_clock::now();
+            return static_cast<uint64_t>(
+                std::chrono::duration_cast<std::chrono::nanoseconds>(tick.time_since_epoch()).count());
+        } else {
+#if __has_builtin(__builtin_readcyclecounter) && !defined(__APPLE__) && !defined(SNMALLOC_NO_AAL_BUILTINS)
+            return __builtin_readcyclecounter();
 #else
-        return Arch::tick();
+            return Arch::tick();
 #endif
-      }
+        }
     }
-  };
+};
 
-  template<class Arch>
-  class AAL_NoStrictProvenance : public Arch
-  {
-    static_assert(
-      (Arch::aal_features & StrictProvenance) == 0,
-      "AAL_NoStrictProvenance requires what it says on the tin");
+template<class Arch>
+class AAL_NoStrictProvenance : public Arch {
+    static_assert((Arch::aal_features & StrictProvenance) == 0,
+                  "AAL_NoStrictProvenance requires what it says on the tin");
 
-  public:
+public:
     /**
      * For architectures which do not enforce StrictProvenance, we can just
      * perform an underhanded bit of type-casting.
      */
-    template<
-      typename T,
-      SNMALLOC_CONCEPT(capptr::IsBound) BOut,
-      SNMALLOC_CONCEPT(capptr::IsBound) BIn,
-      typename U = T>
-    static SNMALLOC_FAST_PATH CapPtr<T, BOut>
-    capptr_bound(CapPtr<U, BIn> a, size_t size) noexcept
-    {
-      static_assert(
-        capptr::is_spatial_refinement<BIn, BOut>(),
-        "capptr_bound must preserve non-spatial CapPtr dimensions");
+    template<typename T, SNMALLOC_CONCEPT(capptr::IsBound) BOut, SNMALLOC_CONCEPT(capptr::IsBound) BIn, typename U = T>
+    static SNMALLOC_FAST_PATH CapPtr<T, BOut> capptr_bound(CapPtr<U, BIn> a, size_t size) noexcept {
+        static_assert(capptr::is_spatial_refinement<BIn, BOut>(),
+                      "capptr_bound must preserve non-spatial CapPtr dimensions");
 
-      UNUSED(size);
-      return CapPtr<T, BOut>::unsafe_from(
-        a.template as_static<T>().unsafe_ptr());
+        UNUSED(size);
+        return CapPtr<T, BOut>::unsafe_from(a.template as_static<T>().unsafe_ptr());
     }
 
-    template<
-      typename T,
-      SNMALLOC_CONCEPT(capptr::IsBound) BOut,
-      SNMALLOC_CONCEPT(capptr::IsBound) BIn,
-      typename U = T>
-    static SNMALLOC_FAST_PATH CapPtr<T, BOut>
-    capptr_rebound(CapPtr<T, BOut> a, CapPtr<U, BIn> b) noexcept
-    {
-      UNUSED(a);
-      return CapPtr<T, BOut>::unsafe_from(
-        b.template as_static<T>().unsafe_ptr());
+    template<typename T, SNMALLOC_CONCEPT(capptr::IsBound) BOut, SNMALLOC_CONCEPT(capptr::IsBound) BIn, typename U = T>
+    static SNMALLOC_FAST_PATH CapPtr<T, BOut> capptr_rebound(CapPtr<T, BOut> a, CapPtr<U, BIn> b) noexcept {
+        UNUSED(a);
+        return CapPtr<T, BOut>::unsafe_from(b.template as_static<T>().unsafe_ptr());
     }
 
-    static SNMALLOC_FAST_PATH size_t capptr_size_round(size_t sz) noexcept
-    {
-      return sz;
+    static SNMALLOC_FAST_PATH size_t capptr_size_round(size_t sz) noexcept {
+        return sz;
     }
-  };
+};
 } // namespace snmalloc
 
 #if defined(PLATFORM_IS_X86)
@@ -254,32 +215,30 @@ namespace snmalloc
 #  include "aal_cheri.h"
 #endif
 
-namespace snmalloc
-{
+namespace snmalloc {
 #if defined(__CHERI_PURE_CAPABILITY__)
-  using Aal = AAL_Generic<AAL_CHERI<AAL_Arch>>;
+using Aal = AAL_Generic<AAL_CHERI<AAL_Arch>>;
 #else
-  using Aal = AAL_Generic<AAL_NoStrictProvenance<AAL_Arch>>;
+using Aal = AAL_Generic<AAL_NoStrictProvenance<AAL_Arch>>;
 #endif
 
-  template<AalFeatures F, SNMALLOC_CONCEPT(IsAAL) AAL = Aal>
-  constexpr bool aal_supports = (AAL::aal_features & F) == F;
+template<AalFeatures F, SNMALLOC_CONCEPT(IsAAL) AAL = Aal>
+constexpr bool aal_supports = (AAL::aal_features & F) == F;
 
-  /*
-   * The backend's leading-order response to StrictProvenance is entirely
-   * within its data structures and not actually anything to do with the
-   * architecture.  Rather than test aal_supports<StrictProvenance> or
-   * defined(__CHERI_PURE_CAPABILITY__) or such therein, using this
-   * backend_strict_provenance flag makes it easy to test a lot of machinery
-   * on non-StrictProvenance architectures.
-   */
-  static constexpr bool backend_strict_provenance =
-    aal_supports<StrictProvenance>;
+/*
+ * The backend's leading-order response to StrictProvenance is entirely
+ * within its data structures and not actually anything to do with the
+ * architecture.  Rather than test aal_supports<StrictProvenance> or
+ * defined(__CHERI_PURE_CAPABILITY__) or such therein, using this
+ * backend_strict_provenance flag makes it easy to test a lot of machinery
+ * on non-StrictProvenance architectures.
+ */
+static constexpr bool backend_strict_provenance = aal_supports<StrictProvenance>;
 } // namespace snmalloc
 
 #ifdef __POINTER_WIDTH__
-#  if ((__POINTER_WIDTH__ == 64) && !defined(SNMALLOC_VA_BITS_64)) || \
-    ((__POINTER_WIDTH__ == 32) && !defined(SNMALLOC_VA_BITS_32))
+#  if ((__POINTER_WIDTH__ == 64) && !defined(SNMALLOC_VA_BITS_64)) \
+      || ((__POINTER_WIDTH__ == 32) && !defined(SNMALLOC_VA_BITS_32))
 #    error Compiler and PAL define inconsistent bit widths
 #  endif
 #endif
