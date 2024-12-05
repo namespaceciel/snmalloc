@@ -10,26 +10,24 @@
 
 #include <cstring>
 
-namespace snmalloc
-{
+namespace snmalloc {
 #ifdef __cpp_concepts
-  /**
-   * The minimal subset of a PAL that we need for delegation
-   */
-  template<typename PAL>
-  concept PALNoAllocBase = IsPAL_static_sizes<PAL> && IsPAL_error<PAL>;
+/**
+ * The minimal subset of a PAL that we need for delegation
+ */
+template<typename PAL>
+concept PALNoAllocBase = IsPAL_static_sizes<PAL> && IsPAL_error<PAL>;
 #endif
 
-  /**
-   * Platform abstraction layer that does not allow allocation.
-   *
-   * This is a minimal PAL for pre-reserved memory regions, where the
-   * address-space manager is initialised with all of the memory that it will
-   * ever use.
-   */
-  template<SNMALLOC_CONCEPT(PALNoAllocBase) BasePAL>
-  struct PALNoAlloc : public BasePAL
-  {
+/**
+ * Platform abstraction layer that does not allow allocation.
+ *
+ * This is a minimal PAL for pre-reserved memory regions, where the
+ * address-space manager is initialised with all of the memory that it will
+ * ever use.
+ */
+template<SNMALLOC_CONCEPT(PALNoAllocBase) BasePAL>
+struct PALNoAlloc : public BasePAL {
     /**
      * Bitmap of PalFeatures flags indicating the optional features that this
      * PAL supports.
@@ -43,25 +41,22 @@ namespace snmalloc
     /**
      * Print a stack trace.
      */
-    static void print_stack_trace()
-    {
-      BasePAL::print_stack_trace();
+    static void print_stack_trace() {
+        BasePAL::print_stack_trace();
     }
 
     /**
      * Report a message to the user.
      */
-    static void message(const char* const str) noexcept
-    {
-      BasePAL::message(str);
+    static void message(const char* const str) noexcept {
+        BasePAL::message(str);
     }
 
     /**
      * Report a fatal error an exit.
      */
-    [[noreturn]] static void error(const char* const str) noexcept
-    {
-      BasePAL::error(str);
+    [[noreturn]] static void error(const char* const str) noexcept {
+        BasePAL::error(str);
     }
 
     /**
@@ -77,16 +72,12 @@ namespace snmalloc
      * This is a no-op in this stub, except for zeroing memory if required.
      */
     template<ZeroMem zero_mem>
-    static void notify_using(void* p, size_t size) noexcept
-    {
-      if constexpr (zero_mem == YesZero)
-      {
-        zero<true>(p, size);
-      }
-      else
-      {
-        UNUSED(p, size);
-      }
+    static void notify_using(void* p, size_t size) noexcept {
+        if constexpr (zero_mem == YesZero) {
+            zero<true>(p, size);
+        } else {
+            UNUSED(p, size);
+        }
     }
 
     /**
@@ -96,11 +87,10 @@ namespace snmalloc
      * virtual-memory functions.
      */
     template<bool page_aligned = false>
-    static void zero(void* p, size_t size) noexcept
-    {
-      memset(p, 0, size);
+    static void zero(void* p, size_t size) noexcept {
+        memset(p, 0, size);
     }
-  };
+};
 } // namespace snmalloc
 
 #endif

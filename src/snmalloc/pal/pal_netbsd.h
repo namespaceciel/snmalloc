@@ -17,17 +17,15 @@ extern "C" int _sys_fsync(int fd);
 
 /// @}
 
-namespace snmalloc
-{
-  /**
-   * NetBSD-specific platform abstraction layer.
-   *
-   * This adds NetBSD-specific aligned allocation to the generic BSD
-   * implementation.
-   */
-  class PALNetBSD : public PALBSD_Aligned<PALNetBSD, _sys_writev, _sys_fsync>
-  {
-  public:
+namespace snmalloc {
+/**
+ * NetBSD-specific platform abstraction layer.
+ *
+ * This adds NetBSD-specific aligned allocation to the generic BSD
+ * implementation.
+ */
+class PALNetBSD : public PALBSD_Aligned<PALNetBSD, _sys_writev, _sys_fsync> {
+public:
     /**
      * Bitmap of PalFeatures flags indicating the optional features that this
      * PAL supports.
@@ -40,25 +38,24 @@ namespace snmalloc
      * As NetBSD does not have the getentropy call, get_entropy64 will
      * currently fallback to C++ libraries std::random_device.
      */
-    static constexpr uint64_t pal_features =
-      PALBSD_Aligned::pal_features | Entropy;
+    static constexpr uint64_t pal_features = PALBSD_Aligned::pal_features | Entropy;
 
     /**
      * Temporary solution for NetBSD < 10
      * random_device seems unimplemented in clang for this platform
      * otherwise using getrandom
      */
-    static uint64_t get_entropy64()
-    {
+    static uint64_t get_entropy64() {
 #  if defined(SYS_getrandom)
-      uint64_t result;
-      if (getrandom(&result, sizeof(result), 0) != sizeof(result))
-        error("Failed to get system randomness");
-      return result;
+        uint64_t result;
+        if (getrandom(&result, sizeof(result), 0) != sizeof(result)) {
+            error("Failed to get system randomness");
+        }
+        return result;
 #  else
-      return PALPOSIX::dev_urandom();
+        return PALPOSIX::dev_urandom();
 #  endif
     }
-  };
+};
 } // namespace snmalloc
 #endif

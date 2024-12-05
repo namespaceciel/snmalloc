@@ -6,38 +6,33 @@
 #include <cstdint>
 #include <type_traits>
 
-namespace snmalloc
-{
-  struct FreeListKey
-  {
+namespace snmalloc {
+struct FreeListKey {
     address_t key1;
     address_t key2;
     address_t key_next;
 
     constexpr FreeListKey(uint64_t key1, uint64_t key2, uint64_t key_next)
-    : key1(static_cast<address_t>(key1)),
-      key2(static_cast<address_t>(key2)),
-      key_next(static_cast<address_t>(key_next))
-    {}
-  };
+        : key1(static_cast<address_t>(key1)),
+          key2(static_cast<address_t>(key2)),
+          key_next(static_cast<address_t>(key_next)) {}
+};
 
-  class LocalEntropy
-  {
+class LocalEntropy {
     uint64_t bit_source{0};
     uint64_t local_key{0};
     uint64_t local_counter{0};
     uint64_t fresh_bits{0};
     uint64_t count{0};
 
-  public:
+public:
     constexpr LocalEntropy() = default;
 
     template<typename PAL>
-    void init()
-    {
-      local_key = get_entropy64<PAL>();
-      local_counter = get_entropy64<PAL>();
-      bit_source = get_next();
+    void init() {
+        local_key     = get_entropy64<PAL>();
+        local_counter = get_entropy64<PAL>();
+        bit_source    = get_next();
     }
 
     /**
@@ -47,30 +42,25 @@ namespace snmalloc
      * This is a very cheap source of some randomness.
      * Returns the bottom bit.
      */
-    uint32_t next_bit()
-    {
-      uint64_t bottom_bit = bit_source & 1;
-      bit_source = (bottom_bit << 63) | (bit_source >> 1);
-      return bit_source & 1;
+    uint32_t next_bit() {
+        uint64_t bottom_bit = bit_source & 1;
+        bit_source          = (bottom_bit << 63) | (bit_source >> 1);
+        return bit_source & 1;
     }
 
     /**
      * A key for the free lists for this thread.
      */
-    void make_free_list_key(FreeListKey& key)
-    {
-      if constexpr (bits::BITS == 64)
-      {
-        key.key1 = static_cast<address_t>(get_next());
-        key.key2 = static_cast<address_t>(get_next());
-        key.key_next = static_cast<address_t>(get_next());
-      }
-      else
-      {
-        key.key1 = static_cast<address_t>(get_next() & 0xffff'ffff);
-        key.key2 = static_cast<address_t>(get_next() & 0xffff'ffff);
-        key.key_next = static_cast<address_t>(get_next() & 0xffff'ffff);
-      }
+    void make_free_list_key(FreeListKey& key) {
+        if constexpr (bits::BITS == 64) {
+            key.key1     = static_cast<address_t>(get_next());
+            key.key2     = static_cast<address_t>(get_next());
+            key.key_next = static_cast<address_t>(get_next());
+        } else {
+            key.key1     = static_cast<address_t>(get_next() & 0xffff'ffff);
+            key.key2     = static_cast<address_t>(get_next() & 0xffff'ffff);
+            key.key_next = static_cast<address_t>(get_next() & 0xffff'ffff);
+        }
     }
 
     /**
@@ -80,16 +70,14 @@ namespace snmalloc
      *
      * Applies a Feistel cipher to a counter
      */
-    uint64_t get_next()
-    {
-      uint64_t c = ++local_counter;
-      uint64_t bottom;
-      for (int i = 0; i < 2; i++)
-      {
-        bottom = c & 0xffff'fffff;
-        c = (c << 32) | (((bottom * local_key) ^ c) >> 32);
-      }
-      return c;
+    uint64_t get_next() {
+        uint64_t c = ++local_counter;
+        uint64_t bottom;
+        for (int i = 0; i < 2; i++) {
+            bottom = c & 0xffff'fffff;
+            c      = (c << 32) | (((bottom * local_key) ^ c) >> 32);
+        }
+        return c;
     }
 
     /**
@@ -97,9 +85,8 @@ namespace snmalloc
      *
      * This loads new entropy into the `next_bit` values.
      */
-    void refresh_bits()
-    {
-      bit_source = get_next();
+    void refresh_bits() {
+        bit_source = get_next();
     }
 
     /**
@@ -107,17 +94,15 @@ namespace snmalloc
      *
      * Does not cycle as frequently as `next_bit`.
      */
-    uint16_t next_fresh_bits(size_t n)
-    {
-      if (count <= n)
-      {
-        fresh_bits = get_next();
-        count = 64;
-      }
-      uint16_t result = static_cast<uint16_t>(fresh_bits & bits::mask_bits(n));
-      fresh_bits >>= n;
-      count -= n;
-      return result;
+    uint16_t next_fresh_bits(size_t n) {
+        if (count <= n) {
+            fresh_bits = get_next();
+            count      = 64;
+        }
+        uint16_t result = static_cast<uint16_t>(fresh_bits & bits::mask_bits(n));
+        fresh_bits >>= n;
+        count -= n;
+        return result;
     }
 
     /***
@@ -129,15 +114,15 @@ namespace snmalloc
      * are drawn larger then n-1, they are mapped onto uniform
      * top range of n.
      */
-    uint16_t sample(uint16_t n)
-    {
-      size_t i = bits::next_pow2_bits(n);
-      uint16_t bits = next_fresh_bits(i);
-      uint16_t result = bits;
-      // Put over flowing bits at the top.
-      if (bits >= n)
-        result = n - (1 + bits - n);
-      return result;
+    uint16_t sample(uint16_t n) {
+        size_t i        = bits::next_pow2_bits(n);
+        uint16_t bits   = next_fresh_bits(i);
+        uint16_t result = bits;
+        // Put over flowing bits at the top.
+        if (bits >= n) {
+            result = n - (1 + bits - n);
+        }
+        return result;
     }
-  };
+};
 } // namespace snmalloc

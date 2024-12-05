@@ -4,16 +4,14 @@
 
 #include <sys/mman.h>
 
-namespace snmalloc
-{
-  /**
-   * Generic *BSD PAL mixin.  This provides features that are common to the BSD
-   * family.
-   */
-  template<typename OS, auto... Args>
-  class PALBSD : public PALPOSIX<OS, Args...>
-  {
-  public:
+namespace snmalloc {
+/**
+ * Generic *BSD PAL mixin.  This provides features that are common to the BSD
+ * family.
+ */
+template<typename OS, auto... Args>
+class PALBSD : public PALPOSIX<OS, Args...> {
+public:
     /**
      * Bitmap of PalFeatures flags indicating the optional features that this
      * PAL supports.
@@ -31,19 +29,18 @@ namespace snmalloc
      * operating system to replace the pages with CoW copies of a zero page at
      * any point between the call and the next write to that page.
      */
-    static void notify_not_using(void* p, size_t size) noexcept
-    {
-      SNMALLOC_ASSERT(is_aligned_block<OS::page_size>(p, size));
+    static void notify_not_using(void* p, size_t size) noexcept {
+        SNMALLOC_ASSERT(is_aligned_block<OS::page_size>(p, size));
 
-      if constexpr (DEBUG)
-        memset(p, 0x5a, size);
+        if constexpr (DEBUG) {
+            memset(p, 0x5a, size);
+        }
 
-      madvise(p, size, MADV_FREE);
+        madvise(p, size, MADV_FREE);
 
-      if constexpr (mitigations(pal_enforce_access))
-      {
-        mprotect(p, size, PROT_NONE);
-      }
+        if constexpr (mitigations(pal_enforce_access)) {
+            mprotect(p, size, PROT_NONE);
+        }
     }
-  };
+};
 } // namespace snmalloc

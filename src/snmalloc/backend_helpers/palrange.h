@@ -1,12 +1,10 @@
 #pragma once
 #include "../pal/pal.h"
 
-namespace snmalloc
-{
-  template<SNMALLOC_CONCEPT(IsPAL) PAL>
-  class PalRange
-  {
-  public:
+namespace snmalloc {
+template<SNMALLOC_CONCEPT(IsPAL) PAL>
+class PalRange {
+public:
     static constexpr bool Aligned = pal_supports<AlignedAllocation, PAL>;
 
     // Note we have always assumed the Pals to provide a concurrency safe
@@ -18,34 +16,28 @@ namespace snmalloc
 
     constexpr PalRange() = default;
 
-    capptr::Arena<void> alloc_range(size_t size)
-    {
-      if (bits::next_pow2_bits(size) >= bits::BITS - 1)
-      {
-        return nullptr;
-      }
+    capptr::Arena<void> alloc_range(size_t size) {
+        if (bits::next_pow2_bits(size) >= bits::BITS - 1) {
+            return nullptr;
+        }
 
-      if constexpr (pal_supports<AlignedAllocation, PAL>)
-      {
-        SNMALLOC_ASSERT(size >= PAL::minimum_alloc_size);
-        auto result = capptr::Arena<void>::unsafe_from(
-          PAL::template reserve_aligned<false>(size));
+        if constexpr (pal_supports<AlignedAllocation, PAL>) {
+            SNMALLOC_ASSERT(size >= PAL::minimum_alloc_size);
+            auto result = capptr::Arena<void>::unsafe_from(PAL::template reserve_aligned<false>(size));
 
 #ifdef SNMALLOC_TRACING
-        message<1024>("Pal range alloc: {} ({})", result.unsafe_ptr(), size);
+            message<1024>("Pal range alloc: {} ({})", result.unsafe_ptr(), size);
 #endif
-        return result;
-      }
-      else
-      {
-        auto result = capptr::Arena<void>::unsafe_from(PAL::reserve(size));
+            return result;
+        } else {
+            auto result = capptr::Arena<void>::unsafe_from(PAL::reserve(size));
 
 #ifdef SNMALLOC_TRACING
-        message<1024>("Pal range alloc: {} ({})", result.unsafe_ptr(), size);
+            message<1024>("Pal range alloc: {} ({})", result.unsafe_ptr(), size);
 #endif
 
-        return result;
-      }
+            return result;
+        }
     }
-  };
+};
 } // namespace snmalloc
