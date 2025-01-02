@@ -6,15 +6,13 @@
 
 #  include <sys/mman.h>
 
-namespace snmalloc
-{
-  /**
-   * Platform abstraction layer for Haiku.  This provides features for this
-   * system.
-   */
-  class PALHaiku : public PALPOSIX<PALHaiku>
-  {
-  public:
+namespace snmalloc {
+/**
+ * Platform abstraction layer for Haiku.  This provides features for this
+ * system.
+ */
+class PALHaiku : public PALPOSIX<PALHaiku> {
+public:
     /**
      * Bitmap of PalFeatures flags indicating the optional features that this
      * PAL supports.
@@ -32,11 +30,10 @@ namespace snmalloc
      * Notify platform that we will not be needing these pages.
      * Haiku does not provide madvise call per say only the posix equivalent.
      */
-    static void notify_not_using(void* p, size_t size) noexcept
-    {
-      SNMALLOC_ASSERT(is_aligned_block<page_size>(p, size));
-      posix_madvise(p, size, POSIX_MADV_DONTNEED);
+    static void notify_not_using(void* p, size_t size) noexcept {
+        SNMALLOC_ASSERT(is_aligned_block<page_size>(p, size));
+        posix_madvise(p, size, POSIX_MADV_DONTNEED);
     }
-  };
+};
 } // namespace snmalloc
 #endif

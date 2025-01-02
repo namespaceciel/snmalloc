@@ -6,87 +6,82 @@
 #include <cstdint>
 #include <type_traits>
 
-namespace snmalloc
-{
-  /**
-   * Simple sequential set of T.
-   *
-   * Implemented as a doubly linked cyclic list.
-   * Linked using the T::node field.
-   *
-   * Can be used in either Fifo or Lifo mode, which is
-   * specified by template parameter to `pop`.
-   */
-  template<typename T>
-  class SeqSet
-  {
-  public:
+namespace snmalloc {
+/**
+ * Simple sequential set of T.
+ *
+ * Implemented as a doubly linked cyclic list.
+ * Linked using the T::node field.
+ *
+ * Can be used in either Fifo or Lifo mode, which is
+ * specified by template parameter to `pop`.
+ */
+template<typename T>
+class SeqSet {
+public:
     /**
      * The doubly linked Node.
      */
-    class Node
-    {
-      Node* next;
-      Node* prev;
+    class Node {
+        Node* next;
+        Node* prev;
 
-      friend class SeqSet;
+        friend class SeqSet;
 
-      constexpr Node(Node* next, Node* prev) : next(next), prev(prev) {}
+        constexpr Node(Node* next, Node* prev)
+            : next(next), prev(prev) {}
 
     public:
-      /// Default constructor, creates an invalid node.
-      constexpr Node() : Node(nullptr, nullptr) {}
+        /// Default constructor, creates an invalid node.
+        constexpr Node()
+            : Node(nullptr, nullptr) {}
 
-      void invariant()
-      {
-        SNMALLOC_ASSERT(next != nullptr);
-        SNMALLOC_ASSERT(prev != nullptr);
-        SNMALLOC_ASSERT(next->prev == this);
-        SNMALLOC_ASSERT(prev->next == this);
-      }
+        void invariant() {
+            SNMALLOC_ASSERT(next != nullptr);
+            SNMALLOC_ASSERT(prev != nullptr);
+            SNMALLOC_ASSERT(next->prev == this);
+            SNMALLOC_ASSERT(prev->next == this);
+        }
 
-      void remove()
-      {
-        invariant();
-        next->invariant();
-        prev->invariant();
-        next->prev = prev;
-        prev->next = next;
-        next->invariant();
-        prev->invariant();
-      }
+        void remove() {
+            invariant();
+            next->invariant();
+            prev->invariant();
+            next->prev = prev;
+            prev->next = next;
+            next->invariant();
+            prev->invariant();
+        }
     };
 
-  private:
+private:
     // Cyclic doubly linked list (initially empty)
     Node head{&head, &head};
 
     /**
      * Returns the containing object.
      */
-    T* containing(Node* n)
-    {
-      // We could use -static_cast<ptrdiff_t>(offsetof(T, node)) here but CHERI
-      // compiler complains. So we restrict to first entries only.
+    T* containing(Node* n) {
+        // We could use -static_cast<ptrdiff_t>(offsetof(T, node)) here but CHERI
+        // compiler complains. So we restrict to first entries only.
 
-      static_assert(offsetof(T, node) == 0);
+        static_assert(offsetof(T, node) == 0);
 
-      return pointer_offset<T>(n, 0);
+        return pointer_offset<T>(n, 0);
     }
 
     /**
      * Gets the doubly linked node for the object.
      */
-    Node* get_node(T* t)
-    {
+    Node* get_node(T* t) {
 #ifdef __CHERI_PURE_CAPABILITY__
-      return &__builtin_no_change_bounds(t->node);
+        return &__builtin_no_change_bounds(t->node);
 #else
-      return &(t->node);
+        return &(t->node);
 #endif
     }
 
-  public:
+public:
     /**
      * Empty queue
      */
@@ -95,13 +90,10 @@ namespace snmalloc
     /**
      * Check for empty
      */
-    SNMALLOC_FAST_PATH bool is_empty()
-    {
-      static_assert(
-        std::is_same_v<Node, decltype(std::declval<T>().node)>,
-        "T->node must be Node for T");
-      head.invariant();
-      return head.next == &head;
+    SNMALLOC_FAST_PATH bool is_empty() {
+        static_assert(std::is_same_v<Node, decltype(std::declval<T>().node)>, "T->node must be Node for T");
+        head.invariant();
+        return head.next == &head;
     }
 
     /**
@@ -109,15 +101,14 @@ namespace snmalloc
      *
      * Assumes queue is non-empty
      */
-    SNMALLOC_FAST_PATH T* pop_front()
-    {
-      head.invariant();
-      SNMALLOC_ASSERT(!this->is_empty());
-      auto node = head.next;
-      node->remove();
-      auto result = containing(node);
-      head.invariant();
-      return result;
+    SNMALLOC_FAST_PATH T* pop_front() {
+        head.invariant();
+        SNMALLOC_ASSERT(!this->is_empty());
+        auto node = head.next;
+        node->remove();
+        auto result = containing(node);
+        head.invariant();
+        return result;
     }
 
     /**
@@ -125,25 +116,24 @@ namespace snmalloc
      *
      * Assumes queue is non-empty
      */
-    SNMALLOC_FAST_PATH T* pop_back()
-    {
-      head.invariant();
-      SNMALLOC_ASSERT(!this->is_empty());
-      auto node = head.prev;
-      node->remove();
-      auto result = containing(node);
-      head.invariant();
-      return result;
+    SNMALLOC_FAST_PATH T* pop_back() {
+        head.invariant();
+        SNMALLOC_ASSERT(!this->is_empty());
+        auto node = head.prev;
+        node->remove();
+        auto result = containing(node);
+        head.invariant();
+        return result;
     }
 
     template<bool is_fifo>
-    SNMALLOC_FAST_PATH T* pop()
-    {
-      head.invariant();
-      if constexpr (is_fifo)
-        return pop_front();
-      else
-        return pop_back();
+    SNMALLOC_FAST_PATH T* pop() {
+        head.invariant();
+        if constexpr (is_fifo) {
+            return pop_front();
+        } else {
+            return pop_back();
+        }
     }
 
     /**
@@ -152,43 +142,39 @@ namespace snmalloc
      * `f` is allowed to remove the element from the set.
      */
     template<typename Fn>
-    SNMALLOC_FAST_PATH void iterate(Fn&& f)
-    {
-      auto curr = head.next;
-      curr->invariant();
+    SNMALLOC_FAST_PATH void iterate(Fn&& f) {
+        auto curr = head.next;
+        curr->invariant();
 
-      while (curr != &head)
-      {
-        // Read next first, as f may remove curr.
-        auto next = curr->next;
-        f(containing(curr));
-        curr = next;
-      }
+        while (curr != &head) {
+            // Read next first, as f may remove curr.
+            auto next = curr->next;
+            f(containing(curr));
+            curr = next;
+        }
     }
 
     /**
      * Add an element to the queue.
      */
-    SNMALLOC_FAST_PATH void insert(T* item)
-    {
-      auto n = get_node(item);
+    SNMALLOC_FAST_PATH void insert(T* item) {
+        auto n = get_node(item);
 
-      n->next = head.next;
-      head.next->prev = n;
+        n->next         = head.next;
+        head.next->prev = n;
 
-      n->prev = &head;
-      head.next = n;
+        n->prev   = &head;
+        head.next = n;
 
-      n->invariant();
-      head.invariant();
+        n->invariant();
+        head.invariant();
     }
 
     /**
      * Peek at next element in the set.
      */
-    SNMALLOC_FAST_PATH const T* peek()
-    {
-      return containing(head.next);
+    SNMALLOC_FAST_PATH const T* peek() {
+        return containing(head.next);
     }
-  };
+};
 } // namespace snmalloc

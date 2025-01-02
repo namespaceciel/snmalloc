@@ -6,14 +6,12 @@
 #  define SNMALLOC_VA_BITS_32
 #endif
 
-namespace snmalloc
-{
-  /**
-   * ARM-specific architecture abstraction layer.
-   */
-  class AAL_PowerPC
-  {
-  public:
+namespace snmalloc {
+/**
+ * ARM-specific architecture abstraction layer.
+ */
+class AAL_PowerPC {
+public:
     /**
      * Bitmap of AalFeature flags
      */
@@ -27,11 +25,10 @@ namespace snmalloc
      * On pipelined processors, notify the core that we are in a spin loop and
      * that speculative execution past this point may not be a performance gain.
      */
-    static inline void pause()
-    {
-      __asm__ volatile("or 27,27,27"); // "yield"
+    inline static void pause() {
+        __asm__ volatile("or 27,27,27"); // "yield"
     }
-  };
+};
 
-  using AAL_Arch = AAL_PowerPC;
+using AAL_Arch = AAL_PowerPC;
 } // namespace snmalloc

@@ -20,26 +20,22 @@
 
 extern "C" int puts(const char* str);
 
-namespace snmalloc
-{
-  class PALLinux : public PALPOSIX<PALLinux>
-  {
-  public:
+namespace snmalloc {
+class PALLinux : public PALPOSIX<PALLinux> {
+public:
     /**
      * Bitmap of PalFeatures flags indicating the optional features that this
      * PAL supports.
      *
      * We always make sure that linux has entropy support.
      */
-    static constexpr uint64_t pal_features = PALPOSIX::pal_features | Entropy |
-      CoreDump
+    static constexpr uint64_t pal_features = PALPOSIX::pal_features | Entropy | CoreDump
 #  ifdef SNMALLOC_HAS_LINUX_FUTEX_H
-      | WaitOnAddress
+                                           | WaitOnAddress
 #  endif
-      ;
+        ;
 
-    static constexpr size_t page_size =
-      Aal::aal_name == PowerPC ? 0x10000 : PALPOSIX::page_size;
+    static constexpr size_t page_size = Aal::aal_name == PowerPC ? 0x10000 : PALPOSIX::page_size;
 
     /**
      * Linux requires an explicit no-reserve flag in `mmap` to guarantee lazy
@@ -56,42 +52,35 @@ namespace snmalloc
      */
     static constexpr int madvise_free_flags =
 #  if defined(MADV_FREE)
-      MADV_FREE
+        MADV_FREE
 #  else
-      MADV_DONTNEED
+        MADV_DONTNEED
 #  endif
-      ;
+        ;
 
-    static void* reserve(size_t size) noexcept
-    {
-      void* p = PALPOSIX<PALLinux>::reserve(size);
-      if (p)
-      {
+    static void* reserve(size_t size) noexcept {
+        void* p = PALPOSIX<PALLinux>::reserve(size);
+        if (p) {
 #  ifdef SNMALLOC_PAGEID
 #    ifndef PR_SET_VMA
-#      define PR_SET_VMA 0x53564d41
+#      define PR_SET_VMA           0x53564d41
 #      define PR_SET_VMA_ANON_NAME 0
 #    endif
 
-        /**
-         *
-         * If the kernel is set with CONFIG_ANON_VMA_NAME
-         * the reserved pages would appear as follow
-         *
-         * 7fa5f0ceb000-7fa5f0e00000 rw-p 00000000 00:00 0 [anon:snmalloc]
-         * 7fa5f0e00000-7fa5f1800000 rw-p 00000000 00:00 0 [anon:snmalloc]
-         *
-         */
+            /**
+             *
+             * If the kernel is set with CONFIG_ANON_VMA_NAME
+             * the reserved pages would appear as follow
+             *
+             * 7fa5f0ceb000-7fa5f0e00000 rw-p 00000000 00:00 0 [anon:snmalloc]
+             * 7fa5f0e00000-7fa5f1800000 rw-p 00000000 00:00 0 [anon:snmalloc]
+             *
+             */
 
-        prctl(
-          PR_SET_VMA,
-          PR_SET_VMA_ANON_NAME,
-          (unsigned long)p,
-          size,
-          (unsigned long)"snmalloc");
+            prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, (unsigned long)p, size, (unsigned long)"snmalloc");
 #  endif
-      }
-      return p;
+        }
+        return p;
     }
 
     /**
@@ -103,185 +92,156 @@ namespace snmalloc
      * clear the underlying memory range.
      */
     template<bool page_aligned = false>
-    static void zero(void* p, size_t size) noexcept
-    {
-      // QEMU does not seem to be giving the desired behaviour for
-      // MADV_DONTNEED. switch back to memset only for QEMU.
+    static void zero(void* p, size_t size) noexcept {
+        // QEMU does not seem to be giving the desired behaviour for
+        // MADV_DONTNEED. switch back to memset only for QEMU.
 #  ifndef SNMALLOC_QEMU_WORKAROUND
-      if (
-        (page_aligned || is_aligned_block<page_size>(p, size)) &&
-        (size > 16 * page_size))
-      {
-        // Only use this on large allocations as memset faster, and doesn't
-        // introduce IPI so faster for small allocations.
-        SNMALLOC_ASSERT(is_aligned_block<page_size>(p, size));
-        madvise(p, size, MADV_DONTNEED);
-      }
-      else
+        if ((page_aligned || is_aligned_block<page_size>(p, size)) && (size > 16 * page_size)) {
+            // Only use this on large allocations as memset faster, and doesn't
+            // introduce IPI so faster for small allocations.
+            SNMALLOC_ASSERT(is_aligned_block<page_size>(p, size));
+            madvise(p, size, MADV_DONTNEED);
+        } else
 #  endif
-      {
-        ::memset(p, 0, size);
-      }
+        {
+            ::memset(p, 0, size);
+        }
     }
 
-    static void notify_not_using(void* p, size_t size) noexcept
-    {
-      SNMALLOC_ASSERT(is_aligned_block<page_size>(p, size));
+    static void notify_not_using(void* p, size_t size) noexcept {
+        SNMALLOC_ASSERT(is_aligned_block<page_size>(p, size));
 
-      // Fill memory so that when we switch the pages back on we don't make
-      // assumptions on the content.
-      if constexpr (DEBUG)
-        memset(p, 0x5a, size);
+        // Fill memory so that when we switch the pages back on we don't make
+        // assumptions on the content.
+        if constexpr (DEBUG) {
+            memset(p, 0x5a, size);
+        }
 
-      madvise(p, size, madvise_free_flags);
+        madvise(p, size, madvise_free_flags);
 
-      if constexpr (mitigations(pal_enforce_access))
-      {
-        mprotect(p, size, PROT_NONE);
-      }
+        if constexpr (mitigations(pal_enforce_access)) {
+            mprotect(p, size, PROT_NONE);
+        }
     }
 
     /**
      * Notify platform that these pages should be included in a core dump.
      */
-    static void notify_do_dump(void* p, size_t size) noexcept
-    {
-      madvise(p, size, MADV_DODUMP);
+    static void notify_do_dump(void* p, size_t size) noexcept {
+        madvise(p, size, MADV_DODUMP);
     }
 
     /**
      * Notify platform that these pages should not be included in a core dump.
      */
-    static void notify_do_not_dump(void* p, size_t size) noexcept
-    {
-      madvise(p, size, MADV_DONTDUMP);
+    static void notify_do_not_dump(void* p, size_t size) noexcept {
+        madvise(p, size, MADV_DONTDUMP);
     }
 
-    static uint64_t get_entropy64()
-    {
-      // TODO: If the system call fails then the POSIX PAL calls libc
-      // functions that can require malloc, which may result in deadlock.
+    static uint64_t get_entropy64() {
+        // TODO: If the system call fails then the POSIX PAL calls libc
+        // functions that can require malloc, which may result in deadlock.
 
-      // SYS_getrandom API stablized since 3.17.
-      // This fallback implementation is to aid some environments
-      // where SYS_getrandom is provided in kernel but the libc
-      // is not providing getentropy interface.
+        // SYS_getrandom API stablized since 3.17.
+        // This fallback implementation is to aid some environments
+        // where SYS_getrandom is provided in kernel but the libc
+        // is not providing getentropy interface.
 
-      union
-      {
-        uint64_t result;
-        char buffer[sizeof(uint64_t)];
-      };
+        union {
+            uint64_t result;
+            char buffer[sizeof(uint64_t)];
+        };
 
-      ssize_t ret;
+        ssize_t ret;
 
-      // give a try to SYS_getrandom
+        // give a try to SYS_getrandom
 #  ifdef SYS_getrandom
-      static std::atomic_bool syscall_not_working = false;
-      // Relaxed ordering should be fine here. This function will be called
-      // during early initialisation, which will examine the availability in a
-      // protected routine.
-      if (false == syscall_not_working.load(std::memory_order_relaxed))
-      {
-        auto current = std::begin(buffer);
-        auto target = std::end(buffer);
-        while (auto length = target - current)
-        {
-          // Reading data via syscall from system entropy pool.
-          // According to both MUSL and GLIBC implementation, getentropy uses
-          // /dev/urandom (blocking API).
-          //
-          // The third argument here indicates:
-          // 1. `GRND_RANDOM` bit is not set, so the source of entropy will be
-          // `urandom`.
-          // 2. `GRND_NONBLOCK` bit is set. Since we are reading from
-          // `urandom`, this means if the entropy pool is
-          // not initialised, we will get a EAGAIN.
-          ret = syscall(SYS_getrandom, current, length, GRND_NONBLOCK);
-          // check whether are interrupt by a signal
-          if (SNMALLOC_UNLIKELY(ret < 0))
-          {
-            if (SNMALLOC_UNLIKELY(errno == EAGAIN))
-            {
-              // the system is going through early initialisation: at this stage
-              // it is very likely that snmalloc is being used in some system
-              // programs and we do not want to block it.
-              return reinterpret_cast<uint64_t>(&result) ^
-                reinterpret_cast<uint64_t>(&error);
+        static std::atomic_bool syscall_not_working = false;
+        // Relaxed ordering should be fine here. This function will be called
+        // during early initialisation, which will examine the availability in a
+        // protected routine.
+        if (false == syscall_not_working.load(std::memory_order_relaxed)) {
+            auto current = std::begin(buffer);
+            auto target  = std::end(buffer);
+            while (auto length = target - current) {
+                // Reading data via syscall from system entropy pool.
+                // According to both MUSL and GLIBC implementation, getentropy uses
+                // /dev/urandom (blocking API).
+                //
+                // The third argument here indicates:
+                // 1. `GRND_RANDOM` bit is not set, so the source of entropy will be
+                // `urandom`.
+                // 2. `GRND_NONBLOCK` bit is set. Since we are reading from
+                // `urandom`, this means if the entropy pool is
+                // not initialised, we will get a EAGAIN.
+                ret = syscall(SYS_getrandom, current, length, GRND_NONBLOCK);
+                // check whether are interrupt by a signal
+                if (SNMALLOC_UNLIKELY(ret < 0)) {
+                    if (SNMALLOC_UNLIKELY(errno == EAGAIN)) {
+                        // the system is going through early initialisation: at this stage
+                        // it is very likely that snmalloc is being used in some system
+                        // programs and we do not want to block it.
+                        return reinterpret_cast<uint64_t>(&result) ^ reinterpret_cast<uint64_t>(&error);
+                    }
+                    if (errno != EINTR) {
+                        break;
+                    }
+                } else {
+                    current += ret;
+                }
             }
-            if (errno != EINTR)
-            {
-              break;
+            if (SNMALLOC_UNLIKELY(target != current)) {
+                // in this routine, the only possible situations should be ENOSYS
+                // or EPERM (forbidden by seccomp, for example).
+                SNMALLOC_ASSERT(errno == ENOSYS || errno == EPERM);
+                syscall_not_working.store(true, std::memory_order_relaxed);
+            } else {
+                return result;
             }
-          }
-          else
-          {
-            current += ret;
-          }
         }
-        if (SNMALLOC_UNLIKELY(target != current))
-        {
-          // in this routine, the only possible situations should be ENOSYS
-          // or EPERM (forbidden by seccomp, for example).
-          SNMALLOC_ASSERT(errno == ENOSYS || errno == EPERM);
-          syscall_not_working.store(true, std::memory_order_relaxed);
-        }
-        else
-        {
-          return result;
-        }
-      }
 #  endif
 
-      // Syscall is not working.
-      // In this case, it is not a good idea to fallback to std::random_device:
-      // 1. it may want to use malloc to create a buffer, which causes
-      // reentrancy problem during initialisation routine.
-      // 2. some implementations also require libstdc++ to be linked since
-      // its APIs are not exception-free.
-      return dev_urandom();
+        // Syscall is not working.
+        // In this case, it is not a good idea to fallback to std::random_device:
+        // 1. it may want to use malloc to create a buffer, which causes
+        // reentrancy problem during initialisation routine.
+        // 2. some implementations also require libstdc++ to be linked since
+        // its APIs are not exception-free.
+        return dev_urandom();
     }
 
 #  ifdef SNMALLOC_HAS_LINUX_FUTEX_H
     using WaitingWord = int;
 
     template<class T>
-    static void wait_on_address(std::atomic<T>& addr, T expected)
-    {
-      int backup = errno;
-      static_assert(
-        sizeof(T) == sizeof(WaitingWord) && alignof(T) == alignof(WaitingWord),
-        "T must be the same size and alignment as WaitingWord");
-      while (addr.load(std::memory_order_relaxed) == expected)
-      {
-        long ret = syscall(
-          SYS_futex, &addr, FUTEX_WAIT_PRIVATE, expected, nullptr, nullptr, 0);
+    static void wait_on_address(std::atomic<T>& addr, T expected) {
+        int backup = errno;
+        static_assert(sizeof(T) == sizeof(WaitingWord) && alignof(T) == alignof(WaitingWord),
+                      "T must be the same size and alignment as WaitingWord");
+        while (addr.load(std::memory_order_relaxed) == expected) {
+            long ret = syscall(SYS_futex, &addr, FUTEX_WAIT_PRIVATE, expected, nullptr, nullptr, 0);
 
-        if (ret == 0)
-          break;
-      }
-      errno = backup;
+            if (ret == 0) {
+                break;
+            }
+        }
+        errno = backup;
     }
 
     template<class T>
-    static void notify_one_on_address(std::atomic<T>& addr)
-    {
-      static_assert(
-        sizeof(T) == sizeof(WaitingWord) && alignof(T) == alignof(WaitingWord),
-        "T must be the same size and alignment as WaitingWord");
-      syscall(SYS_futex, &addr, FUTEX_WAKE_PRIVATE, 1, nullptr, nullptr, 0);
+    static void notify_one_on_address(std::atomic<T>& addr) {
+        static_assert(sizeof(T) == sizeof(WaitingWord) && alignof(T) == alignof(WaitingWord),
+                      "T must be the same size and alignment as WaitingWord");
+        syscall(SYS_futex, &addr, FUTEX_WAKE_PRIVATE, 1, nullptr, nullptr, 0);
     }
 
     template<class T>
-    static void notify_all_on_address(std::atomic<T>& addr)
-    {
-      static_assert(
-        sizeof(T) == sizeof(WaitingWord) && alignof(T) == alignof(WaitingWord),
-        "T must be the same size and alignment as WaitingWord");
-      syscall(
-        SYS_futex, &addr, FUTEX_WAKE_PRIVATE, INT_MAX, nullptr, nullptr, 0);
+    static void notify_all_on_address(std::atomic<T>& addr) {
+        static_assert(sizeof(T) == sizeof(WaitingWord) && alignof(T) == alignof(WaitingWord),
+                      "T must be the same size and alignment as WaitingWord");
+        syscall(SYS_futex, &addr, FUTEX_WAKE_PRIVATE, INT_MAX, nullptr, nullptr, 0);
     }
 #  endif
-  };
+};
 } // namespace snmalloc
 #endif

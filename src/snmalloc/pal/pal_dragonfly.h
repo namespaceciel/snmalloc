@@ -3,17 +3,15 @@
 #if defined(__DragonFly__) && !defined(_KERNEL)
 #  include "pal_bsd.h"
 
-namespace snmalloc
-{
-  /**
-   * DragonflyBSD-specific platform abstraction layer.
-   *
-   * This adds DragonFlyBSD-specific aligned allocation to the BSD
-   * implementation.
-   */
-  class PALDragonfly : public PALBSD<PALDragonfly>
-  {
-  public:
+namespace snmalloc {
+/**
+ * DragonflyBSD-specific platform abstraction layer.
+ *
+ * This adds DragonFlyBSD-specific aligned allocation to the BSD
+ * implementation.
+ */
+class PALDragonfly : public PALBSD<PALDragonfly> {
+public:
     /**
      * Bitmap of PalFeatures flags indicating the optional features that this
      * PAL supports.
@@ -31,13 +29,13 @@ namespace snmalloc
      *
      * DragonflyBSD does not have getentropy, so use getrandom instead.
      */
-    static uint64_t get_entropy64()
-    {
-      uint64_t result;
-      if (getrandom(&result, sizeof(result), 0) != sizeof(result))
-        error("Failed to get system randomness");
-      return result;
+    static uint64_t get_entropy64() {
+        uint64_t result;
+        if (getrandom(&result, sizeof(result), 0) != sizeof(result)) {
+            error("Failed to get system randomness");
+        }
+        return result;
     }
-  };
+};
 } // namespace snmalloc
 #endif

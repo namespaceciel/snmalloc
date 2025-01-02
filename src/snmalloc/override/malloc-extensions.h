@@ -15,18 +15,17 @@
  * usage at the superslab/chunk level. Meta-data and object
  * data is not tracked independantly.
  */
-struct malloc_info_v1
-{
-  /**
-   * Current memory usage of the allocator. Extremely coarse
-   * grained for efficient calculation.
-   */
-  size_t current_memory_usage;
+struct malloc_info_v1 {
+    /**
+     * Current memory usage of the allocator. Extremely coarse
+     * grained for efficient calculation.
+     */
+    size_t current_memory_usage;
 
-  /**
-   * High-water mark of current_memory_usage.
-   */
-  size_t peak_memory_usage;
+    /**
+     * High-water mark of current_memory_usage.
+     */
+    size_t peak_memory_usage;
 };
 
 /**

@@ -6,14 +6,12 @@
 #  define SNMALLOC_VA_BITS_32
 #endif
 
-namespace snmalloc
-{
-  /**
-   * Sparc architecture abstraction layer.
-   */
-  class AAL_Sparc
-  {
-  public:
+namespace snmalloc {
+/**
+ * Sparc architecture abstraction layer.
+ */
+class AAL_Sparc {
+public:
     /**
      * Bitmap of AalFeature flags
      */
@@ -36,27 +34,24 @@ namespace snmalloc
      * as least common denominator to avoid numerous ifdef,
      * reading Conditions Code Register here
      */
-    static inline void pause()
-    {
-      __asm__ volatile("rd %%ccr, %%g0" ::: "memory");
+    inline static void pause() {
+        __asm__ volatile("rd %%ccr, %%g0" ::: "memory");
     }
 
-    static inline void prefetch(void* ptr)
-    {
+    inline static void prefetch(void* ptr) {
 #ifdef SNMALLOC_VA_BITS_64
-      __asm__ volatile("prefetch [%0], 0" ::"r"(ptr));
+        __asm__ volatile("prefetch [%0], 0" ::"r"(ptr));
 #else
-      UNUSED(ptr);
+        UNUSED(ptr);
 #endif
     }
 
-    static inline uint64_t tick()
-    {
-      uint64_t tick;
-      __asm__ volatile("rd %%asr4, %0" : "=r"(tick));
-      return tick;
+    inline static uint64_t tick() {
+        uint64_t tick;
+        __asm__ volatile("rd %%asr4, %0" : "=r"(tick));
+        return tick;
     }
-  };
+};
 
-  using AAL_Arch = AAL_Sparc;
+using AAL_Arch = AAL_Sparc;
 } // namespace snmalloc

@@ -4,17 +4,14 @@
 #  include <random>
 #endif
 
-namespace snmalloc
-{
-  template<typename PAL>
-  std::enable_if_t<pal_supports<Entropy, PAL>, uint64_t> get_entropy64()
-  {
+namespace snmalloc {
+template<typename PAL>
+std::enable_if_t<pal_supports<Entropy, PAL>, uint64_t> get_entropy64() {
     return PAL::get_entropy64();
-  }
+}
 
-  template<typename PAL>
-  std::enable_if_t<!pal_supports<Entropy, PAL>, uint64_t> get_entropy64()
-  {
+template<typename PAL>
+std::enable_if_t<!pal_supports<Entropy, PAL>, uint64_t> get_entropy64() {
 #ifdef SNMALLOC_PLATFORM_HAS_GETENTROPY
     return DefaultPal::get_entropy64();
 #else
@@ -22,5 +19,5 @@ namespace snmalloc
     uint64_t a = rd();
     return (a << 32) ^ rd();
 #endif
-  }
+}
 } // namespace snmalloc

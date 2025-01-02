@@ -1,14 +1,12 @@
 #pragma once
 #include <cstdint>
 
-namespace snmalloc
-{
-  /**
-   * Flags in a bitfield of attributes of this architecture, much like
-   * PalFeatures.
-   */
-  enum AalFeatures : uint64_t
-  {
+namespace snmalloc {
+/**
+ * Flags in a bitfield of attributes of this architecture, much like
+ * PalFeatures.
+ */
+enum AalFeatures : uint64_t {
     /**
      * This architecture does not discriminate between integers and pointers,
      * and so may use bit operations on pointer values.
@@ -24,15 +22,14 @@ namespace snmalloc
      * internal high-privilege pointers for recycling memory on free().
      */
     StrictProvenance = (1 << 2),
-  };
+};
 
-  enum AalName : int
-  {
+enum AalName : int {
     ARM,
     PowerPC,
     X86,
     X86_SGX,
     Sparc,
     RISCV
-  };
+};
 } // namespace snmalloc
